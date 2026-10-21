@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import ru.acousticlive.app.ui.theme.AcousticLiveTheme
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import android.util.Patterns
 
 
 private val LoginBackground = Color(0xFF0F0F12)
@@ -53,8 +54,32 @@ fun OrganizerLoginScreen(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val canSubmit =
-        email.isNotBlank() && password.isNotEmpty() && !isLoading
+    var validationAttempted by remember {
+        mutableStateOf(false)
+    }
+
+    val emailError: String? = if (validationAttempted) {
+        when {
+            email.isBlank() -> "Введите email"
+
+            !Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches() ->
+                "Введите корректный email, например name@mail.ru"
+
+            else -> null
+        }
+    } else {
+        null
+    }
+
+    val passwordError: String? = if (
+        validationAttempted && password.isEmpty()
+    ) {
+        "Введите пароль"
+    } else {
+        null
+    }
+
+    val errorColor = Color(0xFFFF6B6B)
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -94,6 +119,15 @@ fun OrganizerLoginScreen(
                 onValueChange = { email = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Email") },
+                isError = emailError != null,
+                supportingText = {
+                    emailError?.let { message ->
+                        Text(
+                            text = message,
+                            color = errorColor
+                        )
+                    }
+                },
                 singleLine = true,
                 enabled = !isLoading,
                 keyboardOptions = KeyboardOptions(
@@ -110,7 +144,12 @@ fun OrganizerLoginScreen(
                     unfocusedLabelColor = LoginSecondary,
                     focusedContainerColor = LoginBackground,
                     unfocusedContainerColor = LoginBackground,
-                    disabledContainerColor = LoginBackground
+                    disabledContainerColor = LoginBackground,
+                    errorBorderColor = errorColor,
+                    errorLabelColor = errorColor,
+                    errorCursorColor = errorColor,
+                    errorTextColor = LoginText,
+                    errorContainerColor = LoginBackground
                 ),
             )
 
@@ -119,6 +158,15 @@ fun OrganizerLoginScreen(
                 onValueChange = { password = it },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Пароль") },
+                isError = passwordError != null,
+                supportingText = {
+                    passwordError?.let { message ->
+                        Text(
+                            text = message,
+                            color = errorColor
+                        )
+                    }
+                },
                 singleLine = true,
                 enabled = !isLoading,
                 colors = OutlinedTextFieldDefaults.colors(
@@ -132,7 +180,12 @@ fun OrganizerLoginScreen(
                     unfocusedLabelColor = LoginSecondary,
                     focusedContainerColor = LoginBackground,
                     unfocusedContainerColor = LoginBackground,
-                    disabledContainerColor = LoginBackground
+                    disabledContainerColor = LoginBackground,
+                    errorBorderColor = errorColor,
+                    errorLabelColor = errorColor,
+                    errorCursorColor = errorColor,
+                    errorTextColor = LoginText,
+                    errorContainerColor = LoginBackground
                 ),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password
@@ -169,10 +222,24 @@ fun OrganizerLoginScreen(
 
             Button(
                 onClick = {
-                    onLogin(email.trim(), password)
+                    validationAttempted = true
+
+                    val normalizedEmail = email.trim()
+
+                    val emailIsValid =
+                        normalizedEmail.isNotEmpty() &&
+                                Patterns.EMAIL_ADDRESS
+                                    .matcher(normalizedEmail)
+                                    .matches()
+
+                    val passwordIsValid = password.isNotEmpty()
+
+                    if (emailIsValid && passwordIsValid) {
+                        onLogin(normalizedEmail, password)
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = canSubmit,
+                enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = LoginAccent,
                     contentColor = LoginBackground,
