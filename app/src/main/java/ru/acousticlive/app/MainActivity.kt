@@ -37,6 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModelProvider
 import android.view.WindowManager
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.width
 
 private val BackgroundColor = Color(0xFF0F0F12)
 private val AccentColor = Color(0xFFFFB347)
@@ -127,11 +129,12 @@ class MainActivity : ComponentActivity() {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
+                    modifier = Modifier.width(60.dp),
+                    contentPadding = PaddingValues(0.dp),
                     onClick = {
                         fontSize = (fontSize - 2).coerceAtLeast(18)
                     },
@@ -148,7 +151,34 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "Acoustic Live",
+                        color = AccentColor,
+                        fontSize = 32.sp,
+                        lineHeight = 40.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Text(
+                        text = "Музыкальный квартирник",
+                        color = SecondaryTextColor,
+                        fontSize = 16.sp,
+                        lineHeight = 18.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
                 Button(
+                    modifier = Modifier.width(60.dp),
+                    contentPadding = PaddingValues(0.dp),
                     onClick = {
                         fontSize = (fontSize + 2).coerceAtMost(42)
                     },
@@ -176,23 +206,6 @@ class MainActivity : ComponentActivity() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "Acoustic Live",
-                    color = AccentColor,
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = TextAlign.Center
-                )
-
-                Text(
-                    text = "Музыкальный квартирник",
-                    color = SecondaryTextColor,
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
                 Text(
                     text = songTitle,
                     modifier = Modifier.fillMaxWidth(),
