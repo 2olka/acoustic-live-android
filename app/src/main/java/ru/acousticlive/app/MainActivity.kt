@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModelProvider
+import android.view.WindowManager
 
 private val BackgroundColor = Color(0xFF0F0F12)
 private val AccentColor = Color(0xFFFFB347)
@@ -46,6 +47,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val viewerViewModel =
             ViewModelProvider(this)[ViewerViewModel::class.java]
