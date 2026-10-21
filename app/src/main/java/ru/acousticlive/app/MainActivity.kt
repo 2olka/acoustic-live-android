@@ -63,31 +63,40 @@ class MainActivity : ComponentActivity() {
                     containerColor = BackgroundColor
                 ) { innerPadding ->
 
-                    when {
-                        state.isLoading -> {
-                            ViewerScreen(
-                                songTitle = "Подключение…",
-                                lyrics = "Загружаем текущую песню.",
-                                modifier = Modifier.padding(innerPadding)
-                            )
-                        }
-
-                        state.error != null -> {
-                            ViewerScreen(
-                                songTitle = "Не удалось получить данные",
-                                lyrics = state.error.orEmpty(),
-                                modifier = Modifier.padding(innerPadding)
-                            )
-                        }
-
-                        else -> {
-                            ViewerScreen(
-                                songTitle = state.title,
-                                lyrics = state.lyrics,
-                                modifier = Modifier.padding(innerPadding)
-                            )
-                        }
+                    val displayedTitle = when {
+                        !state.isLoading -> state.title
+                        state.error != null -> "Не удалось загрузить песню"
+                        state.isConnected == false -> "Нет сохранённой песни"
+                        else -> "Подключение…"
                     }
+
+                    val displayedLyrics = when {
+                        !state.isLoading -> state.lyrics
+                        state.error != null -> "Подробности указаны выше."
+                        state.isConnected == false ->
+                            "Для первой загрузки нужно соединение с сервером."
+                        else -> "Загружаем текущую песню."
+                    }
+
+                    val connectionMessage = when {
+                        state.error != null -> state.error
+
+                        state.isConnected == false ->
+                            "Нет связи с сервером. Переключения песен временно " +
+                                    "недоступны. Сохранённый текст может быть неактуален."
+
+                        state.isConnected == null ->
+                            "Проверяем связь с сервером…"
+
+                        else -> null
+                    }
+
+                    ViewerScreen(
+                        songTitle = displayedTitle,
+                        lyrics = displayedLyrics,
+                        modifier = Modifier.padding(innerPadding),
+                        connectionMessage = connectionMessage
+                    )
                 }
             }
         }
@@ -97,7 +106,8 @@ class MainActivity : ComponentActivity() {
     fun ViewerScreen(
         songTitle: String,
         lyrics: String,
-        modifier: Modifier = Modifier
+        modifier: Modifier = Modifier,
+        connectionMessage: String? = null
     ) {
         var fontSize by rememberSaveable { mutableStateOf(26) }
         val scrollState = rememberScrollState()
@@ -197,6 +207,19 @@ class MainActivity : ComponentActivity() {
             }
 
             // Прокручивается только содержимое под панелью.
+            if (connectionMessage != null) {
+                Text(
+                    text = connectionMessage,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF302719))
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    color = AccentColor,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
             Column(
                 modifier = Modifier
                     .weight(1f)
