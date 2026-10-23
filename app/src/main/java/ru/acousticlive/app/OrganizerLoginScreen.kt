@@ -46,7 +46,8 @@ fun OrganizerLoginScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    onInputChanged: () -> Unit = {}
 ) {
     var email by rememberSaveable { mutableStateOf("") }
 
@@ -100,6 +101,7 @@ fun OrganizerLoginScreen(
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = LoginAccent
                 ),
+                enabled = !isLoading,
             ) {
                 Text("← К экрану зрителя")
             }
@@ -116,7 +118,10 @@ fun OrganizerLoginScreen(
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = {
+                    email = it
+                    onInputChanged()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Email") },
                 isError = emailError != null,
@@ -155,7 +160,10 @@ fun OrganizerLoginScreen(
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    onInputChanged()
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Пароль") },
                 isError = passwordError != null,

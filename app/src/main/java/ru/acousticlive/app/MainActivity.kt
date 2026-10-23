@@ -39,6 +39,12 @@ import androidx.lifecycle.ViewModelProvider
 import android.view.WindowManager
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import com.google.firebase.auth.FirebaseAuth
+import ru.acousticlive.app.data.FirebaseAuthRepository
+import ru.acousticlive.app.presentation.LoginViewModel
 
 private val BackgroundColor = Color(0xFF0F0F12)
 private val AccentColor = Color(0xFFFFB347)
@@ -55,48 +61,162 @@ class MainActivity : ComponentActivity() {
         val viewerViewModel =
             ViewModelProvider(this)[ViewerViewModel::class.java]
 
+        val loginViewModel = ViewModelProvider(
+            this,
+            LoginViewModel.Factory(
+                FirebaseAuthRepository(FirebaseAuth.getInstance())
+            )
+        )[LoginViewModel::class.java]
+
         setContent {
             val state by viewerViewModel.uiState.collectAsState()
+
+            val loginState by loginViewModel.uiState.collectAsState()
+
+            var showLogin by rememberSaveable {
+                mutableStateOf(false)
+            }
+
+            // Сохраняет прокрутку и размер шрифта при переходах.
+            val screenStateHolder = rememberSaveableStateHolder()
+
+            BackHandler(enabled = showLogin) {
+                if (!loginState.isLoading) {
+                    showLogin = false
+                    loginViewModel.clearError()
+                }
+            }
 
             AcousticLiveTheme {
                 Scaffold(
                     containerColor = BackgroundColor
                 ) { innerPadding ->
+                    if (showLogin) {
+                        if (loginState.userId != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                                    .padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Text(
+                                    text = "Вход выполнен",
+                                    color = MainTextColor,
+                                    fontSize = 28.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                    val displayedTitle = when {
-                        !state.isLoading -> state.title
-                        state.error != null -> "Не удалось загрузить песню"
-                        state.isConnected == false -> "Нет сохранённой песни"
-                        else -> "Подключение…"
+                                Text(
+                                    text = "Вы вошли в учётную запись.",
+                                    color = SecondaryTextColor
+                                )
+
+                                Button(
+                                    onClick = {
+                                        showLogin = false
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = AccentColor,
+                                        contentColor = BackgroundColor
+                                    )
+                                ) {
+                                    Text("К экрану зрителя")
+                                }
+
+                                TextButton(
+                                    onClick = {
+                                        loginViewModel.signOut()
+                                    },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = AccentColor
+                                    )
+                                ) {
+                                    Text("Выйти из аккаунта")
+                                }
+                            }
+                        } else {
+                            OrganizerLoginScreen(
+                                modifier = Modifier.padding(innerPadding),
+                                onBack = {
+                                    if (!loginState.isLoading) {
+                                        showLogin = false
+                                        loginViewModel.clearError()
+                                    }
+                                },
+                                onLogin = loginViewModel::signIn,
+                                isLoading = loginState.isLoading,
+                                errorMessage = loginState.errorMessage,
+                                onInputChanged = loginViewModel::clearError
+                            )
+                        }
+                    } else {
+                        screenStateHolder.SaveableStateProvider("viewer") {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(innerPadding)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(
+                                        onClick = {
+                                            loginViewModel.clearError()
+                                            showLogin = true
+                                        },
+                                        colors = ButtonDefaults.textButtonColors(
+                                            contentColor = AccentColor
+                                        )
+                                    ) {
+                                        Text("Организатор")
+                                    }
+                                }
+
+                                val displayedTitle = when {
+                                    !state.isLoading -> state.title
+                                    state.error != null ->
+                                        "Не удалось загрузить песню"
+                                    state.isConnected == false ->
+                                        "Нет сохранённой песни"
+                                    else -> "Подключение…"
+                                }
+
+                                val displayedLyrics = when {
+                                    !state.isLoading -> state.lyrics
+                                    state.error != null ->
+                                        "Подробности указаны выше."
+                                    state.isConnected == false ->
+                                        "Для первой загрузки нужно соединение с сервером."
+                                    else -> "Загружаем текущую песню."
+                                }
+
+                                val connectionMessage = when {
+                                    state.error != null -> state.error
+
+                                    state.isConnected == false ->
+                                        "Нет связи с сервером. " +
+                                                "Переключения песен временно недоступны. " +
+                                                "Сохранённый текст может быть неактуален."
+
+                                    state.isConnected == null ->
+                                        "Проверяем связь с сервером…"
+
+                                    else -> null
+                                }
+
+                                ViewerScreen(
+                                    songTitle = displayedTitle,
+                                    lyrics = displayedLyrics,
+                                    connectionMessage = connectionMessage,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
-
-                    val displayedLyrics = when {
-                        !state.isLoading -> state.lyrics
-                        state.error != null -> "Подробности указаны выше."
-                        state.isConnected == false ->
-                            "Для первой загрузки нужно соединение с сервером."
-                        else -> "Загружаем текущую песню."
-                    }
-
-                    val connectionMessage = when {
-                        state.error != null -> state.error
-
-                        state.isConnected == false ->
-                            "Нет связи с сервером. Переключения песен временно " +
-                                    "недоступны. Сохранённый текст может быть неактуален."
-
-                        state.isConnected == null ->
-                            "Проверяем связь с сервером…"
-
-                        else -> null
-                    }
-
-                    ViewerScreen(
-                        songTitle = displayedTitle,
-                        lyrics = displayedLyrics,
-                        modifier = Modifier.padding(innerPadding),
-                        connectionMessage = connectionMessage
-                    )
                 }
             }
         }

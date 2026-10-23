@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "190328657981",
-    "project_id": "acoustic-live-android",
-    "storage_bucket": "acoustic-live-android.firebasestorage.app"
+    "project_number": "749070683055",
+    "firebase_url": "https://acoustic-live-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "acoustic-live",
+    "storage_bucket": "acoustic-live.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:190328657981:android:b71745328f94dc275df254",
+        "mobilesdk_app_id": "1:749070683055:android:13ac4d6e0b9dd48d223d5a",
         "android_client_info": {
           "package_name": "ru.acousticlive.app"
         }
@@ -15,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCC73LLw5picwdwdKfR9yRwGZxX9qrKFfs"
+          "current_key": "AIzaSyAPhD0HqU-mWzu3PUsAl430S5c_djpKg-g"
         }
       ],
       "services": {
