@@ -31,6 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ru.acousticlive.app.domain.model.Song
 import ru.acousticlive.app.ui.theme.AcousticLiveTheme
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 
 private val CatalogBackground = Color(0xFF0F0F12)
 private val CatalogSurface = Color(0xFF1C1C22)
@@ -51,12 +58,127 @@ fun SongCatalogScreen(
     isLoading: Boolean = false,
     errorMessage: String? = null,
     hasLoadedSongs: Boolean = true,
-    isConnected: Boolean? = true
+    isConnected: Boolean? = true,
+    onPresentSong: (Song) -> Unit = {},
+    isPresenting: Boolean = false,
+    presentationMessage: String? = null
 ) {
+    var selectedSongId by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    val selectedSong = songs.firstOrNull {
+        it.id == selectedSongId
+    }
+
     val filteredSongs = songs.filter { song ->
         song.title.contains(
             other = searchQuery.trim(),
             ignoreCase = true
+        )
+    }
+
+    if (selectedSongId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                selectedSongId = null
+            },
+            containerColor = CatalogSurface,
+            titleContentColor = CatalogAccent,
+            textContentColor = CatalogText,
+            title = {
+                Text(
+                    text = selectedSong?.title ?: "Песня недоступна",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(
+                        rememberScrollState()
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (isConnected != true) {
+                        Text(
+                            text = "Нет подтверждённой связи с сервером. " +
+                                    "Текст может быть неактуален.",
+                            color = CatalogAccent,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Text(
+                        text = if (selectedSong != null) {
+                            selectedSong.lyrics.ifBlank {
+                                "Текст пока не добавлен."
+                            }
+                        } else {
+                            "Песня удалена из каталога " +
+                                    "или данные больше недоступны."
+                        },
+                        fontSize = 18.sp,
+                        lineHeight = 28.sp
+                    )
+                    if (presentationMessage != null) {
+                        Text(
+                            text = presentationMessage,
+                            color = CatalogAccent,
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
+                        )
+                    }
+
+                    if (isPresenting && isConnected != true) {
+                        Text(
+                            text = "Связь прервана. Отправка не отменена: " +
+                                    "Firebase может завершить её после восстановления связи.",
+                            color = CatalogAccent,
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        selectedSong?.let { song ->
+                            onPresentSong(song)
+                        }
+                    },
+                    enabled = selectedSong != null &&
+                            selectedSong.title.isNotBlank() &&
+                            selectedSong.lyrics.isNotBlank() &&
+                            isConnected == true &&
+                            errorMessage == null &&
+                            !isPresenting,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CatalogAccent,
+                        contentColor = CatalogBackground
+                    )
+                ) {
+                    Text(
+                        if (isPresenting) {
+                            "Отправляем…"
+                        } else {
+                            "Показать зрителям"
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        selectedSongId = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = CatalogAccent
+                    )
+                ) {
+                    Text("Закрыть")
+                }
+            }
         )
     }
 
@@ -100,6 +222,25 @@ fun SongCatalogScreen(
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            if (presentationMessage != null) {
+                Text(
+                    text = presentationMessage,
+                    color = CatalogAccent,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            }
+
+            if (isPresenting && isConnected != true) {
+                Text(
+                    text = "Связь прервана. Отправка не отменена: " +
+                            "Firebase может завершить её после восстановления связи.",
+                    color = CatalogAccent,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+            }
 
             OutlinedTextField(
                 value = searchQuery,
@@ -240,7 +381,12 @@ fun SongCatalogScreen(
                             items = filteredSongs,
                             key = { song -> song.id }
                         ) { song ->
-                            SongCatalogItem(song)
+                            SongCatalogItem(
+                                song = song,
+                                onClick = {
+                                    selectedSongId = song.id
+                                }
+                            )
                         }
                     }
                 }
@@ -250,8 +396,12 @@ fun SongCatalogScreen(
 }
 
 @Composable
-private fun SongCatalogItem(song: Song) {
+private fun SongCatalogItem(
+    song: Song,
+    onClick: () -> Unit
+) {
     Card(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = CatalogSurface
