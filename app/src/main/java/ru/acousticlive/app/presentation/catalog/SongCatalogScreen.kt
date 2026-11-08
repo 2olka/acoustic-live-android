@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -48,7 +49,9 @@ fun SongCatalogScreen(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
-    errorMessage: String? = null
+    errorMessage: String? = null,
+    hasLoadedSongs: Boolean = true,
+    isConnected: Boolean? = true
 ) {
     val filteredSongs = songs.filter { song ->
         song.title.contains(
@@ -129,6 +132,27 @@ fun SongCatalogScreen(
                 )
             )
 
+            if (isConnected != true && errorMessage == null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF302719),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = if (isConnected == false) {
+                            "Нет связи с сервером. " +
+                                    "Каталог может быть неактуален."
+                        } else {
+                            "Проверяем связь с сервером…"
+                        },
+                        modifier = Modifier.padding(12.dp),
+                        color = CatalogAccent,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+            }
+
             when {
                 isLoading -> {
                     CircularProgressIndicator(
@@ -158,6 +182,31 @@ fun SongCatalogScreen(
                     }
                 }
 
+                !hasLoadedSongs -> {
+                    Text(
+                        text = if (isConnected == false) {
+                            "Сохранённый каталог пока недоступен. " +
+                                    "Подключитесь к интернету — " +
+                                    "песни появятся автоматически."
+                        } else {
+                            "Не удалось дождаться каталога. " +
+                                    "Продолжаем ожидать данные. " +
+                                    "Можно повторить загрузку."
+                        },
+                        color = CatalogSecondary
+                    )
+
+                    Button(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = CatalogAccent,
+                            contentColor = CatalogBackground
+                        )
+                    ) {
+                        Text("Повторить")
+                    }
+                }
+
                 songs.isEmpty() -> {
                     Text(
                         text = "В каталоге пока нет песен.",
@@ -174,7 +223,8 @@ fun SongCatalogScreen(
 
                 else -> {
                     Text(
-                        text = "Показано: ${filteredSongs.size} из ${songs.size}",
+                        text = "Показано: ${filteredSongs.size} " +
+                                "из ${songs.size}",
                         color = CatalogSecondary,
                         fontSize = 14.sp
                     )
@@ -256,8 +306,8 @@ private fun SongCatalogScreenPreview() {
             onSearchChange = {},
             onBack = {},
             onSignOut = {},
-            onRetry = {}
+            onRetry = {},
+            isConnected = false
         )
     }
 }
-

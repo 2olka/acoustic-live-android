@@ -6,5 +6,7 @@ data class SongCatalogUiState(
     val songs: List<Song> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val hasLoadedSongs: Boolean = false,
+    val isConnected: Boolean? = null
 )

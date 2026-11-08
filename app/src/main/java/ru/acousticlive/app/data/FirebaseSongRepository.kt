@@ -4,10 +4,10 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import ru.acousticlive.app.domain.model.Song
 import ru.acousticlive.app.domain.CatalogError
 import ru.acousticlive.app.domain.CatalogResult
 import ru.acousticlive.app.domain.SongRepository
+import ru.acousticlive.app.domain.model.Song
 
 class FirebaseSongRepository(
     database: FirebaseDatabase
@@ -15,12 +15,15 @@ class FirebaseSongRepository(
 
     private val songsReference = database.getReference("songs")
 
+    private val connectionReference =
+        database.getReference(".info/connected")
+
     override fun observeSongs(
         onResult: (CatalogResult) -> Unit
     ): () -> Unit {
         var active = true
 
-        val listener = object : ValueEventListener {
+        val songListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (!active) return
 
@@ -33,7 +36,9 @@ class FirebaseSongRepository(
 
                     if (id == null || title == null || lyrics == null) {
                         onResult(
-                            CatalogResult.Failure(CatalogError.INVALID_DATA)
+                            CatalogResult.Failure(
+                                CatalogError.INVALID_DATA
+                            )
                         )
                         return
                     }
@@ -68,11 +73,35 @@ class FirebaseSongRepository(
             }
         }
 
-        songsReference.addValueEventListener(listener)
+        val connectionListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (!active) return
+
+                onResult(
+                    CatalogResult.ConnectionChanged(
+                        isConnected = snapshot.value as? Boolean
+                    )
+                )
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                if (!active) return
+
+                onResult(
+                    CatalogResult.ConnectionChanged(
+                        isConnected = null
+                    )
+                )
+            }
+        }
+
+        connectionReference.addValueEventListener(connectionListener)
+        songsReference.addValueEventListener(songListener)
 
         return {
             active = false
-            songsReference.removeEventListener(listener)
+            songsReference.removeEventListener(songListener)
+            connectionReference.removeEventListener(connectionListener)
         }
     }
 }

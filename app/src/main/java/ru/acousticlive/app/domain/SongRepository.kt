@@ -11,10 +11,13 @@ enum class CatalogError {
 sealed interface CatalogResult {
     data class Success(val songs: List<Song>) : CatalogResult
     data class Failure(val error: CatalogError) : CatalogResult
+    data class ConnectionChanged(
+        val isConnected: Boolean?
+    ) : CatalogResult
 }
 
 interface SongRepository {
-       fun observeSongs(
+    fun observeSongs(
         onResult: (CatalogResult) -> Unit
     ): () -> Unit
 }

@@ -126,6 +126,8 @@ class MainActivity : ComponentActivity() {
                                     onSearchChange = catalogViewModel::updateSearch,
                                     isLoading = catalogState.isLoading,
                                     errorMessage = catalogState.errorMessage,
+                                    hasLoadedSongs = catalogState.hasLoadedSongs,
+                                    isConnected = catalogState.isConnected,
                                     onRetry = catalogViewModel::retry,
                                     onBack = {
                                         showLogin = false
