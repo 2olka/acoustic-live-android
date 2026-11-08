@@ -45,6 +45,11 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import com.google.firebase.auth.FirebaseAuth
 import ru.acousticlive.app.data.FirebaseAuthRepository
 import ru.acousticlive.app.presentation.LoginViewModel
+import androidx.compose.runtime.DisposableEffect
+import com.google.firebase.database.FirebaseDatabase
+import ru.acousticlive.app.data.FirebaseSongRepository
+import ru.acousticlive.app.presentation.catalog.SongCatalogScreen
+import ru.acousticlive.app.presentation.catalog.SongCatalogViewModel
 
 private val BackgroundColor = Color(0xFF0F0F12)
 private val AccentColor = Color(0xFFFFB347)
@@ -68,6 +73,17 @@ class MainActivity : ComponentActivity() {
             )
         )[LoginViewModel::class.java]
 
+        val catalogViewModel = ViewModelProvider(
+            this,
+            SongCatalogViewModel.Factory(
+                FirebaseSongRepository(
+                    FirebaseDatabase.getInstance(
+                        "https://acoustic-live-default-rtdb.asia-southeast1.firebasedatabase.app"
+                    )
+                )
+            )
+        )[SongCatalogViewModel::class.java]
+
         setContent {
             val state by viewerViewModel.uiState.collectAsState()
 
@@ -79,6 +95,8 @@ class MainActivity : ComponentActivity() {
 
             // Сохраняет прокрутку и размер шрифта при переходах.
             val screenStateHolder = rememberSaveableStateHolder()
+
+            val catalogState by catalogViewModel.uiState.collectAsState()
 
             BackHandler(enabled = showLogin) {
                 if (!loginState.isLoading) {
@@ -93,46 +111,62 @@ class MainActivity : ComponentActivity() {
                 ) { innerPadding ->
                     if (showLogin) {
                         if (loginState.userId != null) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(innerPadding)
-                                    .padding(24.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Text(
-                                    text = "Вход выполнен",
-                                    color = MainTextColor,
-                                    fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            if (loginState.userId == "CVfvp7Y334QXUAcFFM0oZefHM8c2") {
+                                DisposableEffect(loginState.userId) {
+                                    catalogViewModel.start()
 
-                                Text(
-                                    text = "Вы вошли в учётную запись.",
-                                    color = SecondaryTextColor
-                                )
-
-                                Button(
-                                    onClick = {
-                                        showLogin = false
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = AccentColor,
-                                        contentColor = BackgroundColor
-                                    )
-                                ) {
-                                    Text("К экрану зрителя")
+                                    onDispose {
+                                        catalogViewModel.stop()
+                                    }
                                 }
 
-                                TextButton(
-                                    onClick = {
+                                SongCatalogScreen(
+                                    songs = catalogState.songs,
+                                    searchQuery = catalogState.searchQuery,
+                                    onSearchChange = catalogViewModel::updateSearch,
+                                    isLoading = catalogState.isLoading,
+                                    errorMessage = catalogState.errorMessage,
+                                    onRetry = catalogViewModel::retry,
+                                    onBack = {
+                                        showLogin = false
+                                    },
+                                    onSignOut = {
+                                        catalogViewModel.stop()
                                         loginViewModel.signOut()
                                     },
-                                    colors = ButtonDefaults.textButtonColors(
-                                        contentColor = AccentColor
-                                    )
+                                    modifier = Modifier.padding(innerPadding)
+                                )
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(innerPadding)
+                                        .padding(24.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    Text("Выйти из аккаунта")
+                                    Text(
+                                        text = "Нет прав организатора",
+                                        color = MainTextColor,
+                                        fontSize = 24.sp
+                                    )
+
+                                    Text(
+                                        text = "Войдите в учётную запись организатора.",
+                                        color = SecondaryTextColor
+                                    )
+
+                                    Button(
+                                        onClick = {
+                                            catalogViewModel.stop()
+                                            loginViewModel.signOut()
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = AccentColor,
+                                            contentColor = BackgroundColor
+                                        )
+                                    ) {
+                                        Text("Выйти из аккаунта")
+                                    }
                                 }
                             }
                         } else {
@@ -180,8 +214,10 @@ class MainActivity : ComponentActivity() {
                                     !state.isLoading -> state.title
                                     state.error != null ->
                                         "Не удалось загрузить песню"
+
                                     state.isConnected == false ->
                                         "Нет сохранённой песни"
+
                                     else -> "Подключение…"
                                 }
 
@@ -189,8 +225,10 @@ class MainActivity : ComponentActivity() {
                                     !state.isLoading -> state.lyrics
                                     state.error != null ->
                                         "Подробности указаны выше."
+
                                     state.isConnected == false ->
                                         "Для первой загрузки нужно соединение с сервером."
+
                                     else -> "Загружаем текущую песню."
                                 }
 
@@ -222,6 +260,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     @Composable
     fun ViewerScreen(
         songTitle: String,
@@ -235,7 +274,7 @@ class MainActivity : ComponentActivity() {
         var previousTitle by rememberSaveable {
             mutableStateOf(songTitle)
         }
-        var previousLyrics by rememberSaveable {mutableStateOf(lyrics)}
+        var previousLyrics by rememberSaveable { mutableStateOf(lyrics) }
 
 
         // При изменении песни или её текста переходим к началу.
@@ -372,6 +411,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 
     @Preview(showBackground = true)
     @Composable
