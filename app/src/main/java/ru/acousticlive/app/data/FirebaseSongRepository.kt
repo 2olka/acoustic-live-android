@@ -8,12 +8,16 @@ import ru.acousticlive.app.domain.CatalogError
 import ru.acousticlive.app.domain.CatalogResult
 import ru.acousticlive.app.domain.SongRepository
 import ru.acousticlive.app.domain.model.Song
+import ru.acousticlive.app.domain.SongPresentationResult
 
 class FirebaseSongRepository(
     database: FirebaseDatabase
 ) : SongRepository {
 
     private val songsReference = database.getReference("songs")
+
+    private val currentSongReference =
+        database.getReference("currentSong")
 
     private val connectionReference =
         database.getReference(".info/connected")
@@ -102,6 +106,32 @@ class FirebaseSongRepository(
             active = false
             songsReference.removeEventListener(songListener)
             connectionReference.removeEventListener(connectionListener)
+        }
+    }
+
+    override fun presentSong(
+        song: Song,
+        onResult: (SongPresentationResult) -> Unit
+    ) {
+        val value = mapOf(
+            "id" to song.id,
+            "title" to song.title,
+            "lyrics" to song.lyrics
+        )
+
+        currentSongReference.setValue(value) { error, _ ->
+            val result = when {
+                error == null ->
+                    SongPresentationResult.SUCCESS
+
+                error.code == DatabaseError.PERMISSION_DENIED ->
+                    SongPresentationResult.ACCESS_DENIED
+
+                else ->
+                    SongPresentationResult.UNKNOWN
+            }
+
+            onResult(result)
         }
     }
 }

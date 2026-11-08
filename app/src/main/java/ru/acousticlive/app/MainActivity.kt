@@ -50,6 +50,7 @@ import com.google.firebase.database.FirebaseDatabase
 import ru.acousticlive.app.data.FirebaseSongRepository
 import ru.acousticlive.app.presentation.catalog.SongCatalogScreen
 import ru.acousticlive.app.presentation.catalog.SongCatalogViewModel
+import ru.acousticlive.app.presentation.catalog.SongPresentationViewModel
 
 private val BackgroundColor = Color(0xFF0F0F12)
 private val AccentColor = Color(0xFFFFB347)
@@ -73,16 +74,21 @@ class MainActivity : ComponentActivity() {
             )
         )[LoginViewModel::class.java]
 
+        val songRepository = FirebaseSongRepository(
+            FirebaseDatabase.getInstance(
+                "https://acoustic-live-default-rtdb.asia-southeast1.firebasedatabase.app"
+            )
+        )
+
         val catalogViewModel = ViewModelProvider(
             this,
-            SongCatalogViewModel.Factory(
-                FirebaseSongRepository(
-                    FirebaseDatabase.getInstance(
-                        "https://acoustic-live-default-rtdb.asia-southeast1.firebasedatabase.app"
-                    )
-                )
-            )
+            SongCatalogViewModel.Factory(songRepository)
         )[SongCatalogViewModel::class.java]
+
+        val presentationViewModel = ViewModelProvider(
+            this,
+            SongPresentationViewModel.Factory(songRepository)
+        )[SongPresentationViewModel::class.java]
 
         setContent {
             val state by viewerViewModel.uiState.collectAsState()
@@ -97,6 +103,9 @@ class MainActivity : ComponentActivity() {
             val screenStateHolder = rememberSaveableStateHolder()
 
             val catalogState by catalogViewModel.uiState.collectAsState()
+
+            val presentationState by
+            presentationViewModel.uiState.collectAsState()
 
             BackHandler(enabled = showLogin) {
                 if (!loginState.isLoading) {
@@ -136,7 +145,16 @@ class MainActivity : ComponentActivity() {
                                         catalogViewModel.stop()
                                         loginViewModel.signOut()
                                     },
-                                    modifier = Modifier.padding(innerPadding)
+                                    modifier = Modifier.padding(innerPadding),
+                                    onPresentSong = { song ->
+                                        presentationViewModel.presentSong(
+                                            song = song,
+                                            isConnected = catalogState.isConnected == true &&
+                                                    catalogState.errorMessage == null
+                                        )
+                                    },
+                                    isPresenting = presentationState.isSending,
+                                    presentationMessage = presentationState.message,
                                 )
                             } else {
                                 Column(
